@@ -51,7 +51,22 @@ def _getNeighbors(adata, celltype, n_neighbors):
 
 from scipy.stats import binomtest
 
-def test(adata:sc.AnnData, f, t, gene1, gene2, pairs, method="binomtest"):
+def test(adata:sc.AnnData, f:str, t:str, gene1:str, gene2:str, pairs, method="binomtest"):
+    """
+    test whether a ligand-receptor pair id significant between two cell types, 
+    Args:
+        adata (sc.AnnData): the anndata object for all cells
+        f (str): the ligand cell type name
+        t (str): the receptor cell type name
+        gene1 (str): ligand gene name
+        gene2 (str): receptor gene name
+        pairs (_type_): cell neighbors pairs for testing
+        method (str, optional): method for testing. Usually bionomtest have better result than 
+        permutation tests. Defaults to "binomtest".
+
+    Returns:
+        the significance p value
+    """
     sub1 = adata[adata.obs["cellType"] == f]
     p1 = sub1.X[:, adata.var_names.get_loc(gene1)].toarray().squeeze()
     p1 = (p1 > 0.001).sum() / len(p1) 

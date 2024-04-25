@@ -2,8 +2,18 @@ import pandas as pd
 import numpy as np 
 import anndata
 
+def df2adata(df:pd.DataFrame, add:anndata.AnnData=None):
+    """  
+    fit cells into a density map based on bin50
 
-def df2adata(df, add=None):
+    Args:
+        df (pd.DataFrame): DataFrame of cells
+        add (anndata.AnnData, optional): The bin50 adata. if given, cells are 
+        mapped to coordinates of the anadata Defaults to None.
+
+    Returns:
+        anndata.AnnData: A anndata object whose vars are the cell types 
+    """
     df["xbin"] = df["x"].astype(int)
     df["ybin"] = df["y"].astype(int)
     df["loci"] = df["xbin"]*100000+df["ybin"]
@@ -11,11 +21,6 @@ def df2adata(df, add=None):
     # print(g.head())
     g = g.to_frame().reset_index()
     if add is not None:
-        # loci = np.array(add.obsm["spatial"][:, 0]*100000+add.obsm["spatial"][:, 1])
-        # loci = pd.DataFrame({"loci":loci})
-        # loci["cell"] = 1
-        # loci["Cell_Type"] = "na"
-        # loci = loci.groupby(["loci", "Cell_Type"])["cell"].count()
         loci = np.array(add.obs["x"]*100000+add.obs["y"])
         add.obs["loci"] = loci
         loci = pd.DataFrame({"loci":loci})
