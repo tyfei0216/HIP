@@ -51,22 +51,7 @@ def _getNeighbors(adata, celltype, n_neighbors):
 
 from scipy.stats import binomtest
 
-def test(adata:sc.AnnData, f:str, t:str, gene1:str, gene2:str, pairs, method="binomtest"):
-    """
-    test whether a ligand-receptor pair id significant between two cell types, 
-    Args:
-        adata (sc.AnnData): the anndata object for all cells
-        f (str): the ligand cell type name
-        t (str): the receptor cell type name
-        gene1 (str): ligand gene name
-        gene2 (str): receptor gene name
-        pairs (_type_): cell neighbors pairs for testing
-        method (str, optional): method for testing. Usually bionomtest have better result than 
-        permutation tests. Defaults to "binomtest".
-
-    Returns:
-        the significance p value
-    """
+def test(adata:sc.AnnData, f, t, gene1, gene2, pairs, method="binomtest"):
     sub1 = adata[adata.obs["cellType"] == f]
     p1 = sub1.X[:, adata.var_names.get_loc(gene1)].toarray().squeeze()
     p1 = (p1 > 0.001).sum() / len(p1) 
@@ -109,14 +94,18 @@ def test(adata:sc.AnnData, f:str, t:str, gene1:str, gene2:str, pairs, method="bi
                 success += 1 
         return success / TRIALS 
 
-def testPair(adatas, cell1, cell2, genepairs, cell1_thres=30, cell2_thres=10, pair_thres = 20):
+def testPair(adatas, cell1, cell2, genepairs, cell1_thres=30, cell2_thres=10, pair_thres = 20, method="binomtest"):
     res = {} 
     for i in genepairs:
         res[i] = []
-    for adata in tqdm(adatas):
-        # print(adata)
-        adata = adatas[adata]
+    for name in tqdm(adatas):
+        print(name)
+        adata = adatas[name]
         cells = adata.obs["cellType"].value_counts() 
+        if cell1 not in cells:
+            continue 
+        if cell2 not in cells:
+            continue
         if cells[cell1] > cell1_thres and cells[cell2] > cell2_thres:
             f, t = _getNeighbors(adata, cell1, 32)
             t2 = adata.obs.index[adata.obs["cellType"] == cell2]
@@ -128,8 +117,17 @@ def testPair(adatas, cell1, cell2, genepairs, cell1_thres=30, cell2_thres=10, pa
             # print(len(pairs))
             if len(pairs) < pair_thres:
                 continue
+            cell = [] 
+            for i in pairs:
+                cell.append(i[1])
+
+            print(name, cell1, cell2, len(pairs), cells[cell1], cells[cell2], len(pairs)/cells[cell2], len(np.unique(cell)), len(np.unique(cell))/cells[cell2])
+            if (len(np.unique(cell))/cells[cell2] < 0.1):
+                continue
+            if len(np.unique(cell)) < 10:
+                continue
             for i in genepairs:
-                pval = test(adata, cell1, cell2, i[0], i[1], pairs, method="binomtest")
+                pval = test(adata, cell1, cell2, i[0], i[1], pairs, method=method)
                 res[i].append(pval)
     return res 
 
@@ -177,6 +175,7 @@ def getNeighbors(adatacells, n_neighbors = [32, 16, 32, 32]):
 
 def getNeighborEnrichmentScore(neighbors, cell_list):
     enrich_score = {}
+    bases = {}
     for maintype in ["Glu", "GABA", "NONE", "Total"]:
         # enrich_score[maintype] = {}
         base = None
@@ -201,9 +200,11 @@ def getNeighborEnrichmentScore(neighbors, cell_list):
             neighbors[i][maintype] = neighbors[i][maintype].div(neighbors[i][maintype].sum(axis=0), axis=1)
             # enrich_score[maintype][i] = results[i][maintype].mean(axis=1)
         # enrich_score[maintype] = pd.DataFrame(enrich_score[maintype])
-        base = base.div(base.sum(axis=0), axis=1)
-        enrich_score[maintype] = base.mean(axis=1)
-    return enrich_score
+        bases[maintype] = base 
+        basetemp = base.div(base.sum(axis=0), axis=1)
+        
+        enrich_score[maintype] = basetemp.mean(axis=1)
+    return enrich_score, bases
 
 def normalizeScore(enrich_score, neighbors):
     for maintype in ["Glu", "GABA", "NONE", "Total"]:
