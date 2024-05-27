@@ -1060,5 +1060,4 @@ for (i in 1:length(Slices)){
   p1_file <- paste(plot_dir, Slices[i], '_Allcelltype.png', sep = '')
   ggsave(p1, filename = p1_file, width = 3, height = 3, bg = 'transparent')
 }
-
-
+                            
